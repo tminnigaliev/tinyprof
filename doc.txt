@@ -1,0 +1,80 @@
+to use this profiler, please use the following API:
+
+1) rename in file tinyprof.h defines, responsible for measured gaps:
+#define GAP_0  0 --->  #define GAP_FUNCTION_FOO  0
+#define GAP_1  1 --->  #define GAP_FUNCTION_BAR  1
+....
+if amount of gaps is greater than 10, add necessary #defines and redefine GAP_CNT
+
+2) declare in some .c-file variable
+
+profiler_entry_t prof[GAP_CNT];
+
+3) before starting profiling, please call function
+
+init_prof(prof, GAP_CNT);
+
+4) on entering piece of code, which time consumption should be measured, please call
+
+start_prof(prof, GAP_FUNCTION_FOO, get_ticks_count);
+
+where 
+- first parameter is variable, declared in (2)
+- second parameter is macros, defined for measured gap
+- third parameter is a name of function, which returns system time
+
+5) on exiting piece of code, which time consumption should be measured, please call
+
+stop_prof(prof, GAP_FUNCTION_FOO, get_ticks_count);
+parameters are the same as in (4)
+
+6) after gathering profiling information of needed amount of cycles please call
+
+terminate_prof(prof, GAP_CNT, GAP_FUNCTION_FOO or -1)
+
+where
+- first parameter is variable, declared in (2)
+- second parameter is GAP_CNT
+- third parameter is id of GAP, which will be considered as reference (i.e. taken as 100% of time)
+in case of third parameter is -1, 100% of time will be calculated as sum of times of all profiled gaps.
+
+
+
+
+In case of your code is a state machine, or if interrupts takes quite a lot of time, there are additional two methods:
+suspend_prof
+resume_prof
+
+they are similar to stop_prof and start_prof correspondingly, their idea is to suspend time counting during the period between suspend and resume.
+
+7) To print profiling statistics, please call:
+
+stat_header(prof, pf)
+where
+ prof - is a name of variable, declared in (2)
+ pf - is a name of printf-like function (in some platform, especially embedded, this function may have different than printf name).
+
+for every profiling gap please use macro:
+
+STAT_PRINT(prof, GAP_FUNCTION_FOO, printf, "1");
+STAT_PRINT(prof, GAP_FUNCTION_BAR, printf, "2");
+etc...
+
+as a result you'll get something like:
+
+tiny-prof statistics:
+====================
+ id |                           gap |       ticks |    count | min.ticks | ave.ticks |  max.ticks | percentage | recur |notes
+----+-------------------------------+-------------+----------+-----------+-----------+------------+------------+-------+-----
+1   |                    GAP_CORDIC |  2878891312 |  1651225 |      1693 |      1743 |       3552 |       51.9 |     1 |
+2   |                     GAP_ATAN2 |  2669000983 |  1651225 |      1408 |      1616 |       3640 |       48.1 |     1 |
+
+parameters are the following:
+prof             - variable, declared at (2)
+GAP_FUNCTION_FOO - identifier of gap, which profile should be printed
+printf           - name of printf-like function (in embedded platforms it may be different than printf)
+"1" or "2"...    - special tag, needed for automatic parsing by testing facilities.
+
+
+
+
